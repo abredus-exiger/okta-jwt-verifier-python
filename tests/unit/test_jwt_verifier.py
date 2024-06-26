@@ -1,7 +1,7 @@
 import pytest
 import time
 
-from jose.exceptions import JWTClaimsError
+from jwt import MissingRequiredClaimError, InvalidIssuerError, InvalidTokenError
 
 from okta_jwt_verifier import BaseJWTVerifier, JWTVerifier, AccessTokenVerifier, IDTokenVerifier
 from okta_jwt_verifier.exceptions import JWKException, JWTValidationException
@@ -184,7 +184,7 @@ def test_verify_claims_invalid():
               'sub': 'test_jwt@okta.com'}
     # verify when aud is a string
     jwt_verifier = BaseJWTVerifier(issuer, client_id)
-    with pytest.raises(JWTClaimsError):
+    with pytest.raises(InvalidTokenError):
         jwt_verifier.verify_claims(claims, ('iss', 'aud', 'exp'))
 
 

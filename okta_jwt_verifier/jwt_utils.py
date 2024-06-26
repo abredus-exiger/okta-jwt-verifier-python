@@ -1,10 +1,15 @@
+import base64
 import json
 
-from jose import jwt, jws
-from jose.exceptions import ExpiredSignatureError
+import jwt
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jwt import ExpiredSignatureError
 
 from .constants import LEEWAY
 from .exceptions import JWTValidationException
+
+jws = jwt.PyJWS()
 
 
 class JWTUtils:
@@ -17,9 +22,9 @@ class JWTUtils:
         Return:
             tuple (headers, claims, signing_input, signature)
         """
-        headers, payload, signing_input, signature = jws._load(token)
+        payload, signing_input, header, signature = jws._load(token)
         claims = json.loads(payload.decode('utf-8'))
-        return (headers, claims, signing_input, signature)
+        return header, claims, signing_input, signature
 
     @staticmethod
     def verify_claims(claims,
@@ -41,21 +46,36 @@ class JWTUtils:
                    'verify_iss': 'iss' in claims_to_verify,
                    'verify_sub': 'sub' in claims_to_verify,
                    'verify_jti': 'jti' in claims_to_verify,
-                   'leeway': leeway}
+                   'leeway': leeway,
+                   'require': claims_to_verify}
         # Validate claims
-        jwt._validate_claims(claims,
-                             audience=audience,
-                             issuer=issuer,
-                             options=options)
+
+        jwt.PyJWT()._validate_claims(payload=claims,
+                                     audience=audience,
+                                     issuer=issuer,
+                                     options=options)
 
     @staticmethod
     def verify_signature(token, okta_jwk):
         """Verify token signature using received jwk."""
-        headers, claims, signing_input, signature = JWTUtils.parse_token(token)
+
+        def base64url_decode(code: str) -> bytes:
+            padding = "=" * (4 - (len(code) % 4))
+            return base64.urlsafe_b64decode(code + padding)
+
+        headers, _, signing_input, signature = JWTUtils.parse_token(token)
+        # !FIXME This is purely for testing purposes
+        if isinstance(okta_jwk, str):
+            key = okta_jwk
+        else:
+            # pyjwt expects the key in PEM format
+            n = int.from_bytes(base64url_decode(okta_jwk["n"]), byteorder="big")
+            e = int.from_bytes(base64url_decode(okta_jwk["e"]), byteorder="big")
+            key = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
         jws._verify_signature(signing_input=signing_input,
                               header=headers,
                               signature=signature,
-                              key=okta_jwk,
+                              key=key,
                               algorithms=['RS256'])
 
     @staticmethod

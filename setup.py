@@ -38,7 +38,8 @@ setup(
     install_requires=[
         "acachecontrol",
         "aiohttp",
-        "python-jose",
-        "retry2"
+        "pyjwt",
+        "retry2",
+        "cryptography",
     ]
 )

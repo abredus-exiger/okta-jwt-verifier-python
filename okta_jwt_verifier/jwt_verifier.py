@@ -68,7 +68,7 @@ class BaseJWTVerifier():
         return JWTUtils.parse_token(token)
 
     async def verify_access_token(self, token, claims_to_verify=('iss', 'aud', 'exp')):
-        """Verify acess token.
+        """Verify access token.
 
         Algorithm:
         1. Retrieve and parse your Okta JSON Web Keys (JWK),
